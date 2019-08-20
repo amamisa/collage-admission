@@ -1,0 +1,463 @@
+---
+title: "Collage Admission"
+output: html_notebook
+---
+<br>
+*By: Amani Alghamdi*
+
+In this project we will go through different analysis starting from univarite to bivariate for feature selection also we will try one other alternative method like backward elimination.
+Also we will be cleaning the data and dealing with missing values and outliers.
+After finishing from descriptive analysis. we will be going through Machine learing techniques using different models, because our case is classification therefore we will use logistic regression, SVM and decision tree. Moreover, the last step is evaluating models and accuracy to choose the best model for prediction.
+
+```{r}
+## load packages
+library(plyr)       # used for apply fun
+library(dplyr)      # used for data manipulation and joining
+library(ggplot2)    # used for ploting 
+library(e1071)      # used for Machine Learning SVM
+library(caret)      # used for
+library(rpart)      # used for decision trees
+library(ggplot2)    # used for plots
+library(caTools)    # used for sampling
+library(rpart.plot) # used for tree plot
+library(Metrics)
+```
+
+```{r}
+## read datasets
+MyData = read.csv("C:/Users/gorea/Downloads/R-demos/college_admission/College_admission.csv")
+```
+
+```{r}
+## structure of the dataframe
+str(MyData)
+```
+We can clearly see that we have 400 observations and 7 variables.
+Note that only GPA is a numaric variable and the rest are integers.
+GRE and GPA are continuous data whereas, the rest are categorical,therefore we are going to transform them to factors later on.
+
+```{r}
+## Columns names
+names(MyData)
+```
+
+```{r}
+# Summary of the dataset
+summary(MyData)
+```
+
+From the table above we can highlight the central tendency measures for all variables.
+now let depicts those variables to see their distributions.
+
+```{r}
+# Change admit to factor
+MyData$admit <- factor(MyData$admit)
+# Change rank to factor
+MyData$rank <- factor(MyData$rank)
+# Change gender to factor
+MyData$Gender_Male <- factor(MyData$Gender_Male)
+# Change gender to factor
+MyData$ses <- factor(MyData$ses)
+# Change gender to factor
+MyData$Race <- factor(MyData$Race)
+str(MyData)
+```
+we have sucsessfully changed categorical variables to factors
+
+## Univariate Analysis
+
+### GRE Distribution
+
+```{r}
+#GRE
+# DATA & AESTHETICS
+gre_pl <- ggplot(MyData,aes(gre))
+# GEOMETRY
+print( gre_pl + geom_histogram(binwidth = 20,aes(fill=..count..)) + xlab("GRE Score")+ ylab("No. of Students")+ ggtitle("GRE Distribution")+ scale_x_continuous(breaks=seq(min(200),max(800),by=100)))
+
+```
+From the above graph we conclude that the majority of the students gre scores around their mean score. and there is exsistance of outliers in the lower limits.The maximum value is 800 and it has a high frequency and the lowest is 220 with very low frequincy.
+
+### GPA Distribution
+
+```{r}
+# DATA & AESTHETICS
+gpa_pl <- ggplot(MyData,aes(gpa))
+# GEOMETRY
+print(gpa_pl + geom_histogram(binwidth = 0.03,color="darkgreen",fill="skyblue") + xlab("GPA Score")+ ylab("No. of Students")+ ggtitle("GPA Distribution")+ scale_x_continuous(breaks=seq(min(2),max(4),by=0.2)))
+```
+
+GPA distribution depicts that the majority of students gpa scores around their mean and there is a significant raise in the students gpa that have 4 points , also there is gpa outliers noticed. The highest gpa frequency is recorded for the maximum gpa score of 4, whearase the lowest gpa of 2.26 has the lowest frequency.
+
+#### Admission Distribution
+
+```{r}
+# DATA & AESTHETICS
+pl <- ggplot(MyData,aes(x=admit))
+# GEOMETRY
+print(pl + geom_bar(fill="orangered") +xlab("Admit")+ ylab("No. of Students")+ ggtitle("Admission Distribution "))
+```
+The above graph shows an overall low frequencies in admissions comparing to the students who didn't admitted by almost half ratio.
+
+### Bivariate Analysis:
+
+##### Categorical & Categorical (Chi-square)
+
+
+### Gender and Admission
+```{r}
+# contengency table
+gender_admit_tab<- table(MyData$Gender_Male,MyData$admit)
+gender_admit_tab
+```
+Males are 1 wherease female is 0<br>
+Admitted is 1 whereas not admitted is 0<br>
+so we can see that there is no significant difference among men and women that have been admitted or not admitted.
+<br>
+Now lets conduct a chi_square test to check weather the gender affects the admission of student or not.
+<br><br>
+*First we need to set the hypothesis:*<br>
+**H0: admission is independent of gender**<br>
+**Ha: admission is related to gender**<br>
+**We'll set a = 0.05**
+```{r}
+# Chi-square test
+chisq.test(gender_admit_tab)
+```
+ we can conclude to p > 0.05 which is mean that we fail to reject the null hypothesis, therefore theres is no relation between admission and gender.
+ 
+ 
+ 
+### Gender and Admission
+ 
+ we are going to explore the relationship between ranks and admission using barplot
+ 
+```{r}
+barplot(gender_admit_tab,beside = T,legend.text =c('Female','Male'))
+```
+The plot confirms what we have declared so far that there is no significant difference between male and female admission, therefore admission and gender are independent variables.
+
+### Rank and Admission
+
+```{r}
+# contengency table
+rank_admit_tab<- table(MyData$rank,MyData$admit)
+# Chi-square test
+chisq.test(rank_admit_tab)
+```
+at alpha of 0.05 p < 0.05, therefore we can reject the null hypothesis thus there is a relationship between rank and admission
+
+```{r}
+# DATA & AESTHETICS
+pl <- ggplot(MyData,aes(x=rank))
+# GEOMETRY
+print(pl + geom_bar(aes(fill=admit)) +xlab("Institution Ranks")+ ylab("No. of Students")+ ggtitle("Admission of each rank "))
+```
+
+From the previous graph we find out that the maximum number of students who has addmitted was from 2 rank institutions in contrast, there is a considerable amount of unadmitted students in the same rank, likewise the rates keeps declining for the lower ranks. obviously the rank 1 has an equal portions of students who has admitted or not but its still has an overall low values.
+
+### Race and Admission
+
+```{r}
+# contengency table
+race_admit_tab<- table(MyData$Race,MyData$admit)
+# Chi-square test
+chisq.test(race_admit_tab)
+```
+p > 0.05, therefore we cannot reject the null hypothesis. race has no effect to admession.
+
+```{r}
+barplot(race_admit_tab,beside = T,legend.text =c("Hispanic","Asian","African-American"))
+```
+### Socioeconomic and Admission
+```{r}
+# contengency table
+ses_admit_tab<- table(MyData$ses,MyData$admit)
+# Chi-square test
+chisq.test(ses_admit_tab)
+```
+Socioeconomic and admission are independent variables.
+
+
+#### Continuous & Categorical (ANOVA)
+### GPA and Admission
+```{r}
+gpa_anova <- aov(MyData$gpa ~ MyData$admit)
+gpa_anova
+```
+
+```{r}
+summary(gpa_anova)
+```
+```{r}
+gpa_anova$coefficients
+```
+
+we can conclude that we can reject the null hypothesis and there is a relationship between gpa and admission.
+
+```{r}
+TukeyHSD(gpa_anova)
+```
+ 
+
+After doing different feature selecting techniques, we have find out some variables that infulence admission such as rank, gpa.
+
+Now we have to do some cleaning like dealing with missing values and outliers.
+
+### Missig Values
+```{r}
+# check weather there is a null values or not 
+any(is.na(MyData))
+```
+From this result we find out that there is no missing values thus, no treatment needed
+
+### Outliers
+
+So for applying the outliers treatment, we need to do 4 steps:<br>
+
+1. plot the dataset using boxplot to recognize the outliers.
+2. display those outliers values
+3. expose the rows where those outliers coming from
+4. remove the rows where it contains the outliers, and depict the final boxplot with cleaned data with no outliers.
+
+Discover the outliers by visuallization
+```{r}
+# visuallize the data to have a clear observasions about the outliers
+boxplot(MyData)
+```
+ From the above plot we find existance of outliers in gre and gpa, but gpa outliers are not clear  for a high notable variability in gre. therefore we ll try to make a separate plot for each one.
+
+```{r}
+# visuallize outliers using boxplot
+outliers <- boxplot(MyData$gre)$out
+# display outliers values
+print(outliers)
+```
+The above plot shows two points between 300 to 200
+
+```{r}
+# find in which rows the outliers are
+MyData[which(MyData$gre %in% outliers),]
+```
+
+```{r}
+# Now you can remove the rows containing the outliers:
+MyData <- MyData[-which(MyData$gre %in% outliers),]
+# checking the boxplot,  notice that those outliers are gone now (gre outliers are cleared)
+clr_gre <- MyData$gre
+boxplot(clr_gre)
+```
+
+Now repeat the process again to clean the gpa outliers.
+
+```{r}
+# visuallize outliers using boxplot
+outliers_gpa <- boxplot(MyData$gpa)$out
+# display outliers values
+print(outliers_gpa)
+```
+We can see outliers are appears around 2 
+
+```{r}
+# find in which rows the outliers are
+MyData[which(MyData$gpa %in% outliers_gpa),]
+```
+
+```{r}
+# Now you can remove the rows containing the outliers:
+MyData <- MyData[-which(MyData$gpa %in% outliers_gpa),]
+# checking the boxplot,  notice that those outliers are gone now (gre outliers are cleared)
+clr_gpa <- MyData$gpa
+boxplot(clr_gpa)
+```
+
+### Transform GRE to factor
+
+```{r}
+# transform numeric to categorical
+MyData$gre <- cut(MyData$gre, breaks = c(0,440,580,1000), labels = c("Low","Medium","High"), right = FALSE)
+```
+
+```{r}
+head(MyData)
+```
+
+Now our data is cleaned, now we need to normalize it
+ 
+```{r}
+# scale function helps in centering and normalizing data
+norm_data <- MyData
+norm_data[,3] <- scale(MyData[,3])
+summary(norm_data)
+```
+
+```{r}
+
+```
+
+```{r}
+# plot the normalized data using hist
+hist(norm_data$gpa)
+```
+
+
+#### Machine learning steps:
+
+1. SPLIT
+2. APPLY MODEl
+3. TEST
+4. CHECK ACCURACY
+
+```{r}
+# split dataset
+
+my_sample <- sample.split(norm_data, SplitRatio = 0.8)
+my_sample
+```
+
+```{r}
+train <- subset(norm_data, my_sample==T)
+test <- subset(norm_data, my_sample == F)
+```
+
+Logistic Regression
+```{r}
+#train the model using training data *** indicate statistical significance variables
+#use glm the linear model function
+#dependent variable is admit and independent variables are rank and gpa
+#the family argument should be binomial to indicate logistic regression
+log_model <- glm(admit ~ gpa+rank ,data = train,family = "binomial")
+summary(log_model)
+
+```
+only important features are rank and gpa
+
+```{r}
+#test model data
+t <- predict(log_model,test,type="response")
+t
+```
+
+
+```{r}
+# confiusion matrix
+confusionMatrix <- table(Actual_Value=test$admit,Predicted_Value=t>0.5)
+confusionMatrix
+```
+
+```{r}
+## Accuracy
+##(confusionMatrix[[1,1]] + confusionMatrix[[2,2]]) / sum(confusionMatrix)
+sum(diag(confusionMatrix))/sum(confusionMatrix)
+```
+
+
+```{r}
+# we will try to apply alternative way which is backward elimination with our logistic model to look for significant varables.
+logistic <- glm(admit ~ . ,data = train,family=binomial(link="logit"))
+
+backward_model <- step(logistic,direction="backward",trace=FALSE)
+summary(backward_model)
+
+```
+
+we can see that gpa and rank has has been chosen as significant variables ***. therefore, our previous analysis was good in finding significant variables.
+
+```{r}
+#test model data
+t <- predict(backward_model,test,type="response")
+t
+```
+
+```{r}
+# confiusion matrix
+confusionMatrix <- table(Actual_Value=test$admit,Predicted_Value=t>0.5)
+confusionMatrix
+```
+
+```{r}
+## Accuracy
+##(confusionMatrix[[1,1]] + confusionMatrix[[2,2]]) / sum(confusionMatrix)
+sum(diag(confusionMatrix))/sum(confusionMatrix)
+```
+
+Now lets move on to different modeling techniques.
+
+SVM
+```{r}
+#buil the model
+# Support Vector Machine (SVM)
+svm_model <- svm(admit ~ rank+gpa,train)
+```
+
+
+```{r}
+#test data through the model
+result_svm <- predict(tree_model,test,type="class")
+result_svm
+```
+
+
+```{r}
+# confiusion matrix
+confusionMatrix <- table(Actual_Value=test$admit,Predicted_Value=result_svm)
+confusionMatrix
+```
+
+```{r}
+## Accuracy
+##(confusionMatrix[[1,1]] + confusionMatrix[[2,2]]) / sum(confusionMatrix)
+sum(diag(confusionMatrix))/sum(confusionMatrix)
+
+```
+
+
+Decision Tree
+
+
+```{r}
+# biuld the model
+#we didnt use the split because trees has built-in 10 k-fold
+tree_model <- rpart(admit ~ gpa+rank ,data = norm_data, method = "class")
+tree_model
+```
+
+```{r}
+#analyze the result
+printcp(tree_model)
+```
+
+```{r}
+# plot the result
+rpart.plot(tree_model, main="Decision Tree")
+
+```
+
+```{r}
+#summary of the tree
+summary(tree_model)
+```
+
+```{r}
+#test data through the model
+result <- predict(tree_model,norm_data,type="class")
+result
+```
+
+```{r}
+# accuracy
+confusionMatrix <- table(Actual_Value=norm_data$admit,Predicted_Value=result)
+confusionMatrix
+
+```
+
+```{r}
+#Accuracy of 74%
+##(confusionMatrix[[1,1]] + confusionMatrix[[2,2]]) / sum(confusionMatrix)
+sum(diag(confusionMatrix))/sum(confusionMatrix)
+```
+
+
+the decision tree shows the best accuracy of 74%, therefore its the chosen model to predict admission.
+
+<br><br><br><br>
